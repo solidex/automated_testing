@@ -1,0 +1,38 @@
+---
+- hosts: all
+  gather_facts: no
+  vars:
+    lldp_inconsistency: []
+
+  tasks:
+
+  - name: "Initialize empty dictionary of runtime lldp neighbors"
+    set_fact:
+       runtime_lldp_neighbors: {}
+
+  - include_tasks: cumulus-get-lldp-nei.yml 
+    when: "'cumulus' in group_names" 
+
+  - include_tasks: exos-get-lldp-nei.yml 
+    when: "'exos' in group_names" 
+
+### Find inconsistencies 
+  - name: "Find inconsistencies between runtime and configured lldp neighbors"
+#    debug: msg="{{'Inconsistency! - ' + inventory_hostname + ' ' + item.key}}" 
+    set_fact:
+       lldp_inconsistency: "{{ lldp_inconsistency +
+       [ inventory_hostname + ': Inconsistent neighbor on port ' + item.key ]}}"
+    when: (runtime_lldp_neighbors[item.key] is defined and runtime_lldp_neighbors[item.key] != item.value) or (runtime_lldp_neighbors[item.key] is not defined)
+    with_dict: "{{ lldp_neighbors }}"
+
+### Find inconsistencies 
+  - name: "Find inconsistencies between runtime and configured lldp neighbors"
+    set_fact:
+       lldp_inconsistency: "{{ lldp_inconsistency + [ inventory_hostname + 
+       ': Inconsistent neighbor on port ' + item.key ]}}"
+    when: (lldp_neighbors[item.key] is defined and lldp_neighbors[item.key] != item.value) or (lldp_neighbors[item.key] is not defined)
+    with_dict: "{{ runtime_lldp_neighbors }}"
+
+  - name: Analyze and print result
+    debug: 
+       msg: "{{ 'Topology is correct' if (lldp_inconsistency | length) == 0 else lldp_inconsistency}}"

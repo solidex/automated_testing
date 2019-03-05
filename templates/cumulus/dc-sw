@@ -1,0 +1,37 @@
+
+ip import-table 10 route-map rdn
+
+ {% for key, value in bgp_neighbors_intf.items() %}
+
+ interface {{ key }}
+ ipv6 nd ra-interval 10
+ no ipv6 nd suppress-ra
+ {%- endfor %}
+ 
+router bgp {{ as }}
+ bgp router-id {{ rid }}
+ bgp bestpath as-path multipath-relax
+ neighbor frr peer-group
+ neighbor frr bfd 2 300 300
+ {% for key, value in bgp_neighbors_intf.items() %}
+ 
+ neighbor {{ key }} interface remote-as {{ value }} 
+ neighbor {{ key }} peer-group frr
+ {%- endfor %}
+ 
+ address-family ipv4 unicast
+  redistribute table 10
+ exit-address-family
+
+
+route-map rdn permit 10
+ match interface vlan16
+!
+route-map rdn permit 20
+ match interface vlan11
+!
+route-map rdn permit 30
+ match interface vlan17
+!
+route-map rdn permit 40
+ match interface vlan18

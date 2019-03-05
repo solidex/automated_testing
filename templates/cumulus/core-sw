@@ -1,0 +1,24 @@
+ {% for key, value in bgp_neighbors_intf.items() %}
+
+ interface {{ key }}
+ ipv6 nd ra-interval 10
+ no ipv6 nd suppress-ra
+ {%- endfor %}
+ 
+router bgp {{ as }}
+ bgp router-id {{ rid }}
+ bgp bestpath as-path multipath-relax
+ neighbor frr peer-group
+ neighbor frr bfd 2 300 300
+ {% for key, value in bgp_neighbors_intf.items() %}
+ 
+ neighbor {{ key }} interface remote-as {{ value }} 
+ neighbor {{ key }} peer-group frr
+ {%- endfor %}
+ 
+  {% for key, value in bgp_neighbors_ip.items() %}
+ 
+ neighbor {{ key }} remote-as {{ value }} 
+ neighbor {{ key }} peer-group frr
+ {%- endfor %}
+

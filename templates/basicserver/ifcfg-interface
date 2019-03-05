@@ -1,0 +1,5 @@
+DEVICE="{{ item }}" {% for key, value in net_config[item].items() %}
+
+{{ key|upper }}="{{ value }}"
+{%- endfor %}
+

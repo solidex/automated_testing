@@ -1,0 +1,44 @@
+---
+- hosts: all
+  gather_facts: no
+  vars:
+    access_inconsistency: []
+
+  tasks:
+
+  - include_tasks: cumulus-get-access-info.yml 
+    when: "'cumulus' in group_names" 
+
+  - include_tasks: exos-get-access-info.yml 
+    when: "'exos' in group_names" 
+
+  - include_tasks: linux-get-access-info.yml 
+    when: "'dc-kvm' in group_names" 
+
+  - include_tasks: utm-get-access-info.yml 
+    when: "'utm' in group_names" 
+
+### Expect access_config and access_subnets_list to be set after calling external procedures
+
+### Find inconsistencies 
+
+  - name: "Check and report access restriction enabled"
+    set_fact:
+       access_inconsistency: "{{ access_inconsistency + [ inventory_hostname + ': access restrictions is not configured'  ]}}"
+    when: access_configured ==''
+
+  - name: "Compare subnets received from host vs what should be"
+    set_fact:
+       access_inconsistency: "{{ access_inconsistency + [ inventory_hostname + ': required subnet ' + item + ' not present in host configuration file'  ]}}"
+    when: access_configured != '' and item not in access_subnets_list
+    loop: "{{mgmt_subnets}}"
+
+  - name: "Compare subnets received from host vs what should be"
+    set_fact:
+       access_inconsistency: "{{ access_inconsistency + [ inventory_hostname + ': subnet ' + item + ' must not present in host configuration file'  ]}}"
+    when: access_configured != '' and item not in mgmt_subnets
+    loop: "{{access_subnets_list}}"
+
+  - name: Analyze and print result
+    debug: 
+       msg: "{{ 'Access restriction configuration is correct' if (access_inconsistency | length) == 0 else access_inconsistency}}"

@@ -1,0 +1,39 @@
+---
+  - name: ssh to host and retrieve lldp neighbors
+    local_action: command ssh {{ ansible_user }}@{{ ansible_host }} -p {{ ansible_port }} 'show lldp neighbors detailed'
+    register: lldp_exos
+
+  - name: "Save output for further analysis"
+    set_fact: result="{{ lldp_exos.stdout_lines }}"
+
+  - name: Select lines with port ID
+    set_fact:
+      port_id_lines: "{{ port_id_lines|default([]) + [item] }}"
+    when: item | regex_search("LLDP Port") 
+    with_items: "{{ result }}"  
+    no_log: True
+
+  - name: Select lines with system names
+    set_fact:
+      sysname_lines: "{{ sysname_lines|default([]) + [item] }}"
+    when: item | regex_search("System Name:")
+    with_items: "{{ result }}" 
+    no_log: True 
+
+  - name: Extract port ID
+    set_fact:
+#   Extract one or two digits after "LLDP Port" : LLDP Port 25 detected 1 neighbor
+      port_ids: "{{ port_id_lines | map('regex_replace', '^.*LLDP Port ([0-9][0-9]?).*$','\\1') | list }}"
+
+  - name: Extract system names
+#   Extract string between " " : - System Name: "core-sw31"
+    set_fact:
+      sysnames: "{{ sysname_lines | map('regex_replace', '^.*System Name: \"([a-z].*)\".*$','\\1') | list }}"
+
+
+  - name: "Form dictionary of runtime lldp neighbors"
+    set_fact:
+       runtime_lldp_neighbors: '{{runtime_lldp_neighbors|combine({item.0: item.1})}}'
+#   Iterate over two lists simultaneously
+    loop: "{{ port_ids|zip(sysnames)|list }}"
+
