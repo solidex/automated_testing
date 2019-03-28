@@ -6,16 +6,16 @@
 
   tasks:
 
-  - include_tasks: cumulus-get-access-info.yml 
+  - include_tasks: tasks/cumulus-get-access-info.yml 
     when: "'cumulus' in group_names" 
 
-  - include_tasks: exos-get-access-info.yml 
+  - include_tasks: tasks/exos-get-access-info.yml 
     when: "'exos' in group_names" 
 
-  - include_tasks: linux-get-access-info.yml 
+  - include_tasks: tasks/linux-get-access-info.yml 
     when: "'dc-kvm' in group_names" 
 
-  - include_tasks: utm-get-access-info.yml 
+  - include_tasks: tasks/utm-get-access-info.yml 
     when: "'utm' in group_names" 
 
 ### Expect access_config and access_subnets_list to be set after calling external procedures

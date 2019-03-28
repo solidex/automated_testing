@@ -10,19 +10,22 @@
     set_fact:
        runtime_lldp_neighbors: {}
 
-  - include_tasks: cumulus-get-lldp-nei.yml 
-    when: "'cumulus' in group_names" 
+  - include_tasks: tasks/cumulus-get-lldp-nei.yml 
+    when: "'cumulus' in group_names and 'vm' not in group_names"
 
-  - include_tasks: exos-get-lldp-nei.yml 
+  - include_tasks: tasks/exos-get-lldp-nei.yml 
     when: "'exos' in group_names" 
 
+  - include_tasks: tasks/linux-get-lldp-nei.yml 
+    when: "'kvm' in group_names and 'vm' not in group_names" 
+    
 ### Find inconsistencies 
   - name: "Find inconsistencies between runtime and configured lldp neighbors"
-#    debug: msg="{{'Inconsistency! - ' + inventory_hostname + ' ' + item.key}}" 
     set_fact:
        lldp_inconsistency: "{{ lldp_inconsistency +
-       [ inventory_hostname + ': Inconsistent neighbor on port ' + item.key ]}}"
-    when: (runtime_lldp_neighbors[item.key] is defined and runtime_lldp_neighbors[item.key] != item.value) or (runtime_lldp_neighbors[item.key] is not defined)
+       [ inventory_hostname + ': Inconsistent neighbor on port ' + item.key + ' Expected neighbor: ' + item.value]}}"
+    when: (runtime_lldp_neighbors[item.key] is defined and runtime_lldp_neighbors[item.key] != item.value) 
+          or (runtime_lldp_neighbors[item.key] is not defined)
     with_dict: "{{ lldp_neighbors }}"
 
 ### Find inconsistencies 
@@ -30,7 +33,7 @@
     set_fact:
        lldp_inconsistency: "{{ lldp_inconsistency + [ inventory_hostname + 
        ': Inconsistent neighbor on port ' + item.key ]}}"
-    when: (lldp_neighbors[item.key] is defined and lldp_neighbors[item.key] != item.value) or (lldp_neighbors[item.key] is not defined)
+    when: (lldp_neighbors[item.key] is defined and lldp_neighbors[item.key] != item.value) or (lldp_neighbors[item.key] is not defined and 'vnet' not in item.key )
     with_dict: "{{ runtime_lldp_neighbors }}"
 
   - name: Analyze and print result

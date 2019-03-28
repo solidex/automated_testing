@@ -1,22 +1,23 @@
 ---
 - hosts: all
   gather_facts: no
+  serial: 2
   vars:
     time_inconsistency: []
     ntp_server_active: 'no'
 
   tasks:
 
-  - include_tasks: cumulus-get-time-info.yml 
+  - include_tasks: tasks/cumulus-get-time-info.yml 
     when: "'cumulus' in group_names" 
 
-  - include_tasks: exos-get-time-info.yml 
+  - include_tasks: tasks/exos-get-time-info.yml 
     when: "'exos' in group_names" 
 
-  - include_tasks: linux-get-time-info.yml 
-    when: "'dc-kvm' in group_names" 
+  - include_tasks: tasks/linux-get-time-info.yml 
+    when: "'kvm' in group_names" 
 
-  - include_tasks: utm-get-time-info.yml 
+  - include_tasks: tasks/utm-get-time-info.yml 
     when: "'utm' in group_names" 
 
 ### Find inconsistencies 
@@ -45,3 +46,9 @@
   - name: Analyze and print result
     debug: 
        msg: "{{ 'Time and ntp configuration is correct' if (time_inconsistency | length) == 0 else time_inconsistency}}"
+
+  - name: Save results to file
+    lineinfile:
+      line: "{{ inventory_hostname + ': Time and ntp configuration is correct' if (time_inconsistency | length) == 0 else time_inconsistency}}"
+      path: "{{playbook_dir}}/logs/time.log"
+    delegate_to: localhost
