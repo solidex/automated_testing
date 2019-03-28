@@ -1,0 +1,12 @@
+hosts
+hosts-local
+main.yml
+*vars
+build
+
+*test*
+*.retry
+
+build/
+log/
+

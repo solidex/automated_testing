@@ -1,0 +1,18 @@
+  - name: "Get lldp neighbors"
+    nclu:
+      commands:
+        - show lldp json
+    register: lldp_json
+
+  - name: "Save output for further analysis"
+    set_fact: result="{{ lldp_json.msg }}"
+
+### append runtime neighbor to dictionary 
+### loop through output "interfaces" array,
+### select "chassis" value from each interface, which is
+### actual neighbor name (if it exists)
+  - name: "Form a dictionary of runtime lldp neighbors"
+    set_fact:
+       runtime_lldp_neighbors: '{{ runtime_lldp_neighbors | combine({item.name: item.chassis[0].name[0].value})  if 
+       item.chassis[0].name is defined else runtime_lldp_neighbors }}'
+    loop: "{{ result | json_query('lldp[0].interface[*]') }}"

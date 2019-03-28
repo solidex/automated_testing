@@ -1,0 +1,13 @@
+---
+  - name: "Get config file"
+    shell: cat /etc/ssh/sshd_config | grep AllowUsers | cut -d' ' -f2-
+    register: result
+
+  - name: "Access configured?"
+    set_fact: 
+      access_configured: "{{result.stdout}}"
+
+  - name: "Format access list"
+    set_fact: 
+      access_subnets_list: "{{result.stdout.split(' ') | map ('regex_replace', '^.*@([0-9].*).*$','\\1') | list }}"
+    when: result.stdout != ''

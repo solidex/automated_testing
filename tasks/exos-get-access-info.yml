@@ -1,0 +1,26 @@
+---
+  - name: "Check policy file exists"
+    local_action: command ssh {{ ansible_user }}@{{ ansible_host }} -p {{ ansible_port }} show policy | grep {{admin_access_policy}}
+    register: policy_file_exists
+
+  - name: "Check policy file contents"
+    local_action: command ssh {{ ansible_user }}@{{ ansible_host }} -p {{ ansible_port }} show policy {{admin_access_policy}} | grep source-address
+    register: policy_file
+    when: policy_file_exists.stdout != ''
+
+  - name: "Check policy applied"
+    local_action: command ssh {{ ansible_user }}@{{ ansible_host }} -p {{ ansible_port }} show configuration | include \"configure ssh2 access-profile {{admin_access_policy}}\"
+    register: policy_file_applied
+
+  - name: "Get config file"
+    set_fact: 
+      access_configured: "{{policy_file_applied.stdout}}"
+
+  - name: "Print list"
+    debug: msg="{{policy_file.stdout_lines}}"
+    when: policy_file_exists.stdout != ''
+
+  - name: "Get access list"
+    set_fact: 
+      access_subnets_list: "{{[] if policy_file_exists.stdout == '' else policy_file.stdout_lines | map ('regex_replace', '^.*source-address ([0-9].*) .*$','\\1') | list}}"
+

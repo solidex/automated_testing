@@ -1,0 +1,41 @@
+---
+  - name: "Get host time"
+### First grep system time, then capture everything from column 4 (Month) till end of line 
+    local_action: shell cat templates/utm/get-host-time.j2 | ssh {{ ansible_user }}@{{ ansible_host }} -p {{ ansible_port }} | grep "System time" | cut -d' ' -f4-
+    register: host_date
+
+  - name: "Get local time"
+    local_action: shell date +"%b %d %T %Y"
+    register: local_date
+
+  - name: "Get host timezone"
+    local_action: shell cat templates/utm/get-host-timezone.j2 | ssh {{ ansible_user }}@{{ ansible_host }} -p {{ ansible_port }} | grep "timezone" | awk '{print $3}'
+    register: host_timezone
+
+  - name: "Get ntp sync status"
+    local_action: shell cat templates/utm/get-host-ntp-status.j2 | ssh {{ ansible_user }}@{{ ansible_host }} -p {{ ansible_port }} | grep "synchronized:" | awk '{print $5}'
+    register: host_ntp_sync_status
+
+  - name: "Get ntp configuration"
+    local_action: shell cat templates/utm/get-host-ntp-config.j2 | ssh {{ ansible_user }}@{{ ansible_host }} -p {{ ansible_port }} | grep "set server" | awk '{print $3}'
+    register: configured_ntp_servers
+
+  - name: "Get time difference"
+    set_fact:
+      time_diff: "{{ ((local_date.stdout | to_datetime('%b %d %H:%M:%S %Y')) - (host_date.stdout | to_datetime('%b  %d %H:%M:%S %Y'))).total_seconds() }}"
+
+  - name: "Format host timezone"
+    set_fact: 
+      host_timezone: "{{ host_timezone.stdout }}"
+
+  - name: "Format ntp synchronization status"
+    set_fact:
+     ntp_server_active: "{{host_ntp_sync_status.stdout | regex_replace('^([a-z].*),$','\\1')}}"
+
+  - name: "Format configured servers list"
+    set_fact: 
+      configured_ntp_servers: "{{ configured_ntp_servers.stdout_lines | map('regex_replace', '^\"(.*)\"$','\\1') | list }}"
+
+#  - name: print variables
+#    debug: msg="{{time_diff}} - {{host_timezone}} - {{ntp_server_active}} - {{configured_ntp_servers}}" 
+
